@@ -1,8 +1,21 @@
 # Ank-Simplified-GA
 The most simplified WordPress Google Analytics Plugin.
 
+- - -
 
-##Some Implemented Features
+
+>**You can also download the Latest version from [here](https://wordpress.org/plugins/ank-simplified-ga)**
+
+
+
+- - -
+## Requirements
+- WordPress v3.8+ (latest will be better)
+- Google Analytics account [Free]
+
+- - -
+
+## Features
 * Simplest user interface
 * Most light weight plugin
 * Support Universal Google and Classic Analytics
@@ -18,4 +31,12 @@ The most simplified WordPress Google Analytics Plugin.
 * Don't track anything inside wp-admin by default
 
 
+- - -
+## Change Log
+Change log is available [here](https://wordpress.org/plugins/ank-simplified-ga/changelog/)
 
+
+-----
+
+
+**Created By: *Ankur Kumar* &copy; 2015**
