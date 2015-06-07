@@ -85,7 +85,7 @@ It will also disable tracking by remove code from front-end.
 
 Just go [here](https://support.google.com/analytics/answer/1032385).
 
-= Am i using Classic or Universal GA ?
+= Am i using Classic or Universal GA ? =
 
 [This](https://support.google.com/analytics/answer/4457764) might help.
 
