@@ -1,8 +1,8 @@
-=== Ank Simplified GA ===
+=== Ank Simplified Google Analytics ===
 Tags: google analytics, tracking, light weight, simple, easy, free , multisite
 Requires at least: 3.8.0
 Tested up to: 4.2.2
-Stable tag: 0.4
+Stable tag: 0.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Contributors: ank91
@@ -33,10 +33,13 @@ Track your WordPress website with Google Analytics service.
 * Supports multi-site
 * Disable tracking when Network Admin is logged-in
 * Debugging mode
+* Force SSL
+* Track user engagement
 
 
 
 == Installation ==
+0. Remove existing Google Analytics plugin or disable them.
 1. Search for 'Ank Simplified GA' in WordPress Plugin Directory and Download the .zip file & extract it.
 2. Upload the folder `ank-simplified-ga` to the `/wp-content/plugins/` directory
 3. Activate the plugin through the 'Plugins List' page in WordPress Admin Area.
@@ -52,6 +55,7 @@ Track your WordPress website with Google Analytics service.
 WordPress plugin directory already have many of these kind of plugins.
 But not all are optimized for performance.
 Most of them lacks some features, while some of them have unused features.
+
 This plugin was developed to provide most used feature in one place without compromising the speed.
 So give it a try , i am sure you will not regret for your decision.
 
@@ -69,17 +73,20 @@ There may be several reasons for this.
 = Changes does not reflect after saving settings ? =
 
 Are you using some Cache/Performance plugin (eg:WP Super Cache/W3 Total Cache) ?
+
 Then flush your WP cache after saving settings.
 
 = Where does it store settings and options ? =
 
 WP Database->wp-options->asga_options.
+
 Uses a Single Row, stored in array for faster access.
 
 
 = What if i uninstall/remove this plugin? =
 
 No worry! It will remove its traces from database upon uninstall.
+
 It will also disable tracking by remove code from front-end.
 
 = Where to find my GA Tracking ID ? =
@@ -96,10 +103,16 @@ Debugging mode allows you to troubleshot problems with Google Analytics web trac
 Once you enable this mode. Open up your site homepage and press F12 to open developer tools,
 now switch to console tab to see detailed messages.
 
+You can also use [this](https://chrome.google.com/extensions/detail/jnkmfdileelhofjcijamephohjechhna) Google Chrome extension for easy debugging.
+
 You can read more about troubleshooting [here](https://developers.google.com/analytics/resources/articles/gaTrackingTroubleshooting#gaDebug)
 
 Don't forget to disable this mode in production.
 This mode is only available for administrators only when they are logged-in to WordPress dashboard.
+
+= How does it work for multi-site ? =
+
+You need to configure the plugin for each of sub-site individually.
 
 = Did you test it with old version of WordPress ? =
 
@@ -114,6 +127,7 @@ Yes you can. Do whatever you want do.
 = Is Google Analytics service free. =
 
 Yes, There is paid version of Google Analytics also.
+
 Read more [here](https://developers.google.com/analytics/devguides/collection/analyticsjs/limits-quotas).
 
 
@@ -125,6 +139,7 @@ Read more [here](https://developers.google.com/analytics/devguides/collection/an
 == Upgrade Notice ==
 
 No big changes yet in this plugin, so go ahead and upgrade to new version whenever i release.
+
 It just a matter of a second. It will cost not more than 10 KB.
 
 
@@ -133,6 +148,13 @@ It just a matter of a second. It will cost not more than 10 KB.
 
 
 == Changelog ==
+
+= 0.5 =
+* Plugin name changed to 'Ank Simplified Google Analytics'
+* New tabbed interface
+* Force SSL
+* User engagement tracking
+* Control tracking code execution
 
 = 0.4 =
 * Debugging mode
