@@ -11,6 +11,8 @@ if ( !defined( 'WP_UNINSTALL_PLUGIN' ) )
 
 
 $option_name = 'asga_options' ;
+$transient_name = 'ank_simplified_ga_ja';
+
 /*
  * lets remove the database entry created by this plugin
  */
@@ -18,6 +20,7 @@ $option_name = 'asga_options' ;
 if ( !is_multisite() )
 {
     delete_option( $option_name );
+    delete_transient($transient_name);
 }
 else
 {
@@ -29,6 +32,7 @@ else
     {
         switch_to_blog( $blog_id );
         delete_option( $option_name );
+        delete_transient($transient_name);
 
     }
     switch_to_blog( $original_blog_id );
