@@ -6,7 +6,7 @@
 
 /* No direct access */
 if (!defined('ABSPATH')) exit;
-if (!defined('ASGA_BASE_FILE')) wp_die('What ?');
+if (!defined('ASGA_BASE_FILE')) die('What ?');
 
 class Ank_Simplified_GA_Admin
 {
@@ -17,7 +17,7 @@ class Ank_Simplified_GA_Admin
     /*store database option field name to avoid confusion */
     private $option_name = 'asga_options';
     /*transient name*/
-    private $transient_name = 'ank_simplified_ga_js';
+    private $transient_name = 'asga_js_cache';
 
     function __construct()
     {
@@ -27,6 +27,8 @@ class Ank_Simplified_GA_Admin
         }
         /*to save default options upon activation*/
         register_activation_hook(plugin_basename(ASGA_BASE_FILE), array($this, 'do_upon_plugin_activation'));
+
+        register_deactivation_hook(plugin_basename(ASGA_BASE_FILE), array($this, 'do_upon_plugin_deactivation'));
 
         /*for register setting*/
         add_action('admin_init', array($this, 'register_plugin_settings'));
@@ -63,13 +65,21 @@ class Ank_Simplified_GA_Admin
      */
     function do_upon_plugin_activation()
     {
-        //delete transient upon activation or update
+        //delete transient upon activation
         $this->delete_transient_js();
 
-        //if options already exists then return early
-        if (get_option($this->option_name)!==false) return;
+        //if options not exists then update with defaults
+        if (get_option($this->option_name)==false){
+            update_option($this->option_name, $this->get_default_options());
+        }
 
-        update_option($this->option_name, $this->get_default_options());
+    }
+
+    function do_upon_plugin_deactivation()
+    {
+        //delete transient upon activation
+        $this->delete_transient_js();
+
     }
 
     /*Register our settings, using WP settings API*/
@@ -477,8 +487,6 @@ class Ank_Simplified_GA_Admin
         $options = $this->get_safe_options();
         //id ga id is not set return early
         if (empty($options['ga_id'])) return false;
-        //if current user is not admin then return early
-        if (!current_user_can('manage_options')) return false;
         //if debug mode is off return early
         if ($options['debug_mode'] == 0) return false;
         //else return true
@@ -515,7 +523,7 @@ class Ank_Simplified_GA_Admin
         //get fresh options from db
         $db_options = get_option($this->option_name);
         //check if we need to proceed , if no return early
-        if ($this->if_proceed_to_upgrade($db_options) === false) return;
+        if ($this->can_proceed_to_upgrade($db_options) === false) return;
         //get default options
         $default_options = $this->get_default_options();
         //merge with db options , preserve old
@@ -534,7 +542,7 @@ class Ank_Simplified_GA_Admin
      * @return bool|mixed
      *
      */
-    private function if_proceed_to_upgrade($db_options)
+    private function can_proceed_to_upgrade($db_options)
     {
 
         if (empty($db_options) || !is_array($db_options)) return true;

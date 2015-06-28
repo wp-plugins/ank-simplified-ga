@@ -3,7 +3,7 @@
 Plugin Name: Ank Simplified Google Analytics
 Plugin URI: https://github.com/ank91/ank-simplified-ga
 Description: Simple, light weight, and non-bloated WordPress Google Analytics Plugin.
-Version: 0.7
+Version: 0.8
 Author: Ankur Kumar
 Author URI: http://ank91.github.io/
 License: GPL2
@@ -14,7 +14,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 /* No direct access*/
 if (!defined('ABSPATH')) exit;
 
-define('ASGA_PLUGIN_VER', '0.7');
+define('ASGA_PLUGIN_VER', '0.8');
 define('ASGA_BASE_FILE', __FILE__);
 
 class Ank_Simplified_GA
@@ -22,7 +22,7 @@ class Ank_Simplified_GA
     protected static $instance = null;
     private $option_name = 'asga_options';
     private $asga_options = array();
-    private $transient_name = 'ank_simplified_ga_js';
+    private $transient_name = 'asga_js_cache';
 
     private function __construct()
     {
@@ -61,8 +61,6 @@ class Ank_Simplified_GA
      */
     function print_js_code()
     {
-        //check if transient data exists and use it instead
-        if($this->get_transient_js()) return;
 
         //get database options
         $options = $this->asga_options;
@@ -70,10 +68,13 @@ class Ank_Simplified_GA
         //check if to proceed or not
         if (!$this->is_tracking_possible($options)) return;
 
+        //check if transient data exists and use it instead
+        if ($this->get_transient_js()) return;
+
         //get tracking id
-        $ga_id = esc_attr($options['ga_id']);
+        $ga_id = esc_js($options['ga_id']);
         //decide sub-domain
-        $domain = empty($options['ga_domain']) ? 'auto' : esc_attr($options['ga_domain']);
+        $domain = empty($options['ga_domain']) ? 'auto' : esc_js($options['ga_domain']);
 
         //check for debug mode
         $debug_mode = $this->check_debug_mode($options);
@@ -90,7 +91,7 @@ class Ank_Simplified_GA
 
             $gaq[] = "'create', '" . $ga_id . "', '" . $domain . "'";
 
-            if($options['force_ssl']==1){
+            if ($options['force_ssl'] == 1) {
                 $gaq[] = "'set', 'forceSSL', true";
             }
 
@@ -114,8 +115,8 @@ class Ank_Simplified_GA
                 $gaq[] = "'send','pageview'";
             }
 
-           ob_start();
-           require('views/universal_script.php');
+            ob_start();
+            require('views/universal_script.php');
 
         } else {
             //classic ga is enabled
@@ -139,7 +140,7 @@ class Ank_Simplified_GA
                 $gaq[] = "'_setDomainName', '" . $domain . "'";
             }
 
-            if($options['force_ssl']==1){
+            if ($options['force_ssl'] == 1) {
                 $gaq[] = "'_gat._forceSSL'";
             }
 
@@ -178,7 +179,7 @@ class Ank_Simplified_GA
      */
     private function check_debug_mode($options)
     {
-        //debug mode is for logged-in admins/network admins only
+        //debug mode is only for logged-in admins/network admins
         if (current_user_can('manage_options') || is_super_admin()) {
             if ($options['debug_mode'] == 1) {
                 return true;
