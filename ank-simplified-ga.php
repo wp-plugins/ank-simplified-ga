@@ -3,7 +3,7 @@
 Plugin Name: Ank Simplified Google Analytics
 Plugin URI: https://github.com/ank91/ank-simplified-ga
 Description: Simple, light weight, and non-bloated WordPress Google Analytics Plugin.
-Version: 0.8
+Version: 0.8.1
 Author: Ankur Kumar
 Author URI: http://ank91.github.io/
 License: GPL2
@@ -14,33 +14,22 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 /* No direct access*/
 if (!defined('ABSPATH')) exit;
 
-define('ASGA_PLUGIN_VER', '0.8');
+define('ASGA_PLUGIN_VER', '0.8.1');
 define('ASGA_BASE_FILE', __FILE__);
 
 class Ank_Simplified_GA
 {
-    protected static $instance = null;
-    private $option_name = 'asga_options';
+    private static $instances = array();
     private $asga_options = array();
-    private $transient_name = 'asga_js_cache';
+
+    const OPTION_NAME = 'asga_options';
+    const TRANSIENT_JS_NAME = 'asga_js_cache';
 
     private function __construct()
     {
-        // If instance is null, create it. Prevent creating multiple instances of this class
-        if (is_null(self::$instance)) {
-            self::$instance = $this;
-        }
-        //store all options in a local array
-        $this->asga_options = get_option($this->option_name);
+        $this->set_db_options();
+        $this->init();
 
-        //get action's priority
-        $js_priority = absint($this->asga_options['js_priority']);
-
-        //decide where to print code
-        if ($this->asga_options['js_location'] == 1)
-            add_action('wp_head', array($this, 'print_js_code'), $js_priority);
-        else
-            add_action('wp_footer', array($this, 'print_js_code'), $js_priority);
     }
 
     /**
@@ -49,17 +38,49 @@ class Ank_Simplified_GA
     public static function get_instance()
     {
 
-        if (is_null(self::$instance)) {
-            self::$instance = new self();
+        $cls = get_called_class();
+        if (!isset(self::$instances[$cls])) {
+            self::$instances[$cls] = new static;
         }
+        return self::$instances[$cls];
+    }
 
-        return self::$instance;
+    protected function __clone()
+    {
+        //don't not allow clones
+    }
+
+    public function __wakeup()
+    {
+        throw new Exception("Cannot unserialize singleton");
     }
 
     /**
+     * Store database options in a local array
+     */
+    private function set_db_options()
+    {
+        $this->asga_options = get_option(self::OPTION_NAME);
+    }
+
+    /**
+     * Init front end part
+     */
+    private function init()
+    {
+        //get action's priority
+        $js_priority = absint($this->asga_options['js_priority']);
+
+        //decide where to print code
+        if ($this->asga_options['js_location'] == 1)
+            add_action('wp_head', array($this, 'print_tracking_code'), $js_priority);
+        else
+            add_action('wp_footer', array($this, 'print_tracking_code'), $js_priority);
+    }
+    /**
      * Prepare and print javascript code to front end
      */
-    function print_js_code()
+    function print_tracking_code()
     {
 
         //get database options
@@ -79,7 +100,6 @@ class Ank_Simplified_GA
         //check for debug mode
         $debug_mode = $this->check_debug_mode($options);
         //these flags will be used in view
-        $user_engagement = absint($options['log_user_engagement']);
         $js_load_later = absint($options['js_load_later']);
 
         $gaq = array();
@@ -234,7 +254,7 @@ class Ank_Simplified_GA
      */
     private function get_transient_js()
     {
-        if (($transient_js = get_transient($this->transient_name)) !== false) {
+        if (($transient_js = get_transient(self::TRANSIENT_JS_NAME)) !== false) {
             //replace string to detect caching
             echo str_replace('Tracking start', 'Tracking start, Caching in on', $transient_js);
             return true;
@@ -251,21 +271,20 @@ class Ank_Simplified_GA
     private function set_transient_js($buffer)
     {
         //cache code to database for 24 hours
-        set_transient($this->transient_name, $buffer, 86400);
+        set_transient(self::TRANSIENT_JS_NAME, $buffer, 86400);
 
     }
 
 } //end class
 
 
-if(is_admin()&& ( !defined( 'DOING_AJAX' ) || !DOING_AJAX )) {
+if (is_admin() && (!defined('DOING_AJAX') || !DOING_AJAX)) {
     /* Load admin part only if we are inside wp-admin */
     require(trailingslashit(dirname(__FILE__)) . "asga-admin.php");
     //init admin class
     global $Ank_Simplified_GA_Admin;
     $Ank_Simplified_GA_Admin = Ank_Simplified_GA_Admin::get_instance();
-}
-else {
+} else {
     /*init front end part*/
     global $Ank_Simplified_GA;
     $Ank_Simplified_GA = Ank_Simplified_GA::get_instance();

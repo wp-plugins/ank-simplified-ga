@@ -11,23 +11,20 @@ if (!defined('ASGA_BASE_FILE')) die('What ?');
 class Ank_Simplified_GA_Admin
 {
 
-    protected static $instance = null;
+    private static $instances = array();
     /*store plugin option page slug, so that we can change it with ease */
-    private $plugin_slug = 'asga_options_page';
+    const PLUGIN_SLUG = 'asga_options_page';
     /*store database option field name to avoid confusion */
-    private $option_name = 'asga_options';
-    /*transient name*/
-    private $transient_name = 'asga_js_cache';
+    const OPTION_NAME = 'asga_options';
+    /*js transient name*/
+    const TRANSIENT_JS_NAME = 'asga_js_cache';
 
-    function __construct()
+    private function __construct()
     {
-        // If instance is null, create it. Prevent creating multiple instances of this class
-        if (is_null(self::$instance)) {
-            self::$instance = $this;
-        }
+
         /*to save default options upon activation*/
         register_activation_hook(plugin_basename(ASGA_BASE_FILE), array($this, 'do_upon_plugin_activation'));
-
+        /*delete transients when deactivated*/
         register_deactivation_hook(plugin_basename(ASGA_BASE_FILE), array($this, 'do_upon_plugin_deactivation'));
 
         /*for register setting*/
@@ -42,7 +39,7 @@ class Ank_Simplified_GA_Admin
         /* Show warning if debug mode is on  */
         add_action('admin_notices', array($this, 'show_admin_notice'));
 
-        //check for database upgrades
+        /*check for database upgrades*/
         add_action( 'plugins_loaded', array( $this, 'may_be_upgrade' ) );
 
     }
@@ -53,11 +50,21 @@ class Ank_Simplified_GA_Admin
     public static function get_instance()
     {
 
-        if (is_null(self::$instance)) {
-            self::$instance = new self();
+        $cls = get_called_class();
+        if (!isset(self::$instances[$cls])) {
+            self::$instances[$cls] = new static;
         }
+        return self::$instances[$cls];
+    }
 
-        return self::$instance;
+    protected function __clone()
+    {
+        //don't not allow clones
+    }
+
+    public function __wakeup()
+    {
+        throw new Exception("Cannot unserialize singleton");
     }
 
     /*
@@ -69,8 +76,8 @@ class Ank_Simplified_GA_Admin
         $this->delete_transient_js();
 
         //if options not exists then update with defaults
-        if (get_option($this->option_name)==false){
-            update_option($this->option_name, $this->get_default_options());
+        if (get_option(self::OPTION_NAME)==false){
+            update_option(self::OPTION_NAME, $this->get_default_options());
         }
 
     }
@@ -85,7 +92,7 @@ class Ank_Simplified_GA_Admin
     /*Register our settings, using WP settings API*/
     function register_plugin_settings()
     {
-        register_setting('asga_plugin_options', $this->option_name, array($this, 'ASGA_validate_options'));
+        register_setting('asga_plugin_options', self::OPTION_NAME, array($this, 'ASGA_validate_options'));
     }
 
 
@@ -93,13 +100,13 @@ class Ank_Simplified_GA_Admin
      * Adds a 'Settings' link for this plugin on plugin listing page
      *
      * @param $links
-     * @param $file
      * @return array  Links array
      */
-    function add_plugin_actions_links($links, $file)
+    function add_plugin_actions_links($links)
     {
+
         if (current_user_can('manage_options')) {
-            $build_url = add_query_arg('page', $this->plugin_slug, 'options-general.php');
+            $build_url = add_query_arg('page', self::PLUGIN_SLUG, 'options-general.php');
             array_unshift(
                 $links,
                 sprintf('<a href="%s">%s</a>', $build_url, __('Settings'))
@@ -114,7 +121,7 @@ class Ank_Simplified_GA_Admin
      */
     function add_to_settings_menu()
     {
-        $page_hook_suffix = add_submenu_page('options-general.php', 'Ank Simplified Google Analytics', 'Ank Simplified GA', 'manage_options', $this->plugin_slug, array($this, 'ASGA_options_page'));
+        $page_hook_suffix = add_submenu_page('options-general.php', 'Ank Simplified Google Analytics', 'Ank Simplified GA', 'manage_options', self::PLUGIN_SLUG, array($this, 'ASGA_options_page'));
         /*add help stuff via tab*/
         add_action("load-$page_hook_suffix", array($this, 'add_help_menu_tab'));
         /*we can load additional css/js to our option page here */
@@ -154,7 +161,6 @@ class Ank_Simplified_GA_Admin
             'js_priority' => 20,
             'log_404' => 0,
             'log_search' => 0,
-            'log_user_engagement' => 0,
             'ua_enabled' => 1,
             'displayfeatures' => 0,
             'ga_ela' => 0,
@@ -189,9 +195,9 @@ class Ank_Simplified_GA_Admin
         if (!preg_match('|^UA-\d{4,}-\d+$|', (string)$in['ga_id'])) {
             $out['ga_id'] = '';
             //warn user that the entered id is not valid
-            add_settings_error($this->option_name, 'ga_id', 'Your GA tracking ID seems invalid. Please validate.');
+            add_settings_error(self::OPTION_NAME, 'ga_id', 'Your GA tracking ID seems invalid. Please validate.');
         } else {
-            $out['ga_id'] = esc_html($in['ga_id']);
+            $out['ga_id'] = sanitize_text_field($in['ga_id']);
         }
 
         $radio_items = array('js_location','js_load_later');
@@ -202,9 +208,9 @@ class Ank_Simplified_GA_Admin
 
         $out['js_priority'] = (empty($in['js_priority'])) ? 20 : absint($in['js_priority']);
 
-        $out['ga_domain'] = esc_html($in['ga_domain']);
+        $out['ga_domain'] = sanitize_text_field($in['ga_domain']);
 
-        $checkbox_items = array('ua_enabled', 'anonymise_ip', 'displayfeatures', 'ga_ela', 'log_404', 'log_search','log_user_engagement','debug_mode','force_ssl');
+        $checkbox_items = array('ua_enabled', 'anonymise_ip', 'displayfeatures', 'ga_ela', 'log_404', 'log_search','debug_mode','force_ssl');
          //add rolls to checkbox_items array
         foreach ($this->get_all_roles() as $role => $role_info) {
             $checkbox_items[] = 'ignore_role_' . $role;
@@ -237,7 +243,7 @@ class Ank_Simplified_GA_Admin
             <h2 class="nav-tab-wrapper" id="ga-tabs">
                 <a class="nav-tab" id="ga-general-tab" href="#top#ga-general">General</a>
                 <a class="nav-tab" id="ga-advanced-tab" href="#top#ga-advanced">Advanced</a>
-                <a class="nav-tab" id="ga-events-tab" href="#top#ga-events">Tracking</a>
+                <a class="nav-tab" id="ga-events-tab" href="#top#ga-events">Monitor</a>
                 <a class="nav-tab" id="ga-troubleshoot-tab" href="#top#ga-troubleshoot">Troubleshoot</a>
             </h2><!--.nav-tab-wrapper-->
 
@@ -257,7 +263,7 @@ class Ank_Simplified_GA_Admin
                        </td>
                    </tr>
                    <tr>
-                       <th scope="row">Universal/Classic:</th>
+                       <th scope="row">Analytics Version:</th>
                        <td>
                            <select name="asga_options[ua_enabled]">
                                <option value="1" <?php selected($options['ua_enabled'], 1) ?>>Universal (analytics.js)</option>
@@ -300,6 +306,7 @@ class Ank_Simplified_GA_Admin
                        <tr>
                            <th scope="row">Force SSL :</th>
                            <td><label><input type="checkbox" name="asga_options[force_ssl]" value="1" <?php checked($options['force_ssl'], 1) ?>>Force SSL </label>
+                           <p class="description">Transmit data over https (secure) connection</p>
                            </td>
                        </tr>
                        <tr>
@@ -337,7 +344,6 @@ class Ank_Simplified_GA_Admin
                                $events = array(
                                    'log_404' => 'Log 404 errors as events',
                                    'log_search' => 'Log searched items as page views',
-                                   'log_user_engagement' => 'Log user engagement as events'
                                );
                                //loop through each event item
                                foreach ($events as $event => $label) {
@@ -486,7 +492,7 @@ class Ank_Simplified_GA_Admin
     private function check_admin_notice()
     {
         //show only for this plugin option page
-        if(strpos(get_current_screen()->id, $this->plugin_slug) === false) return false;
+        if(strpos(get_current_screen()->id, self::PLUGIN_SLUG) === false) return false;
 
         $options = $this->get_safe_options();
         //id ga id is not set return early
@@ -505,7 +511,9 @@ class Ank_Simplified_GA_Admin
     private function get_safe_options()
     {
         //get fresh options from db
-        $db_options = get_option($this->option_name);
+        $db_options = get_option(self::OPTION_NAME);
+        //be fail safe, if not array then array_merge may fail
+        if(!is_array($db_options)) {$db_options=array();}
         //if options not exists in db then init with defaults , also always append default options to existing options
         $db_options = empty($db_options) ? $this->get_default_options() : array_merge($this->get_default_options(),$db_options);
         return $db_options;
@@ -515,8 +523,9 @@ class Ank_Simplified_GA_Admin
     /**
      * Delete cache version of tracking code
      */
-    private function delete_transient_js(){
-        delete_transient($this->transient_name);
+    private function delete_transient_js()
+    {
+        delete_transient(self::TRANSIENT_JS_NAME);
     }
 
     /**
@@ -525,7 +534,7 @@ class Ank_Simplified_GA_Admin
     function may_be_upgrade()
     {
         //get fresh options from db
-        $db_options = get_option($this->option_name);
+        $db_options = get_option(self::OPTION_NAME);
         //check if we need to proceed , if no return early
         if ($this->can_proceed_to_upgrade($db_options) === false) return;
         //get default options
@@ -535,7 +544,7 @@ class Ank_Simplified_GA_Admin
         //update plugin version
         $new_options['plugin_ver'] = ASGA_PLUGIN_VER;
         //write options back to db
-        update_option($this->option_name, $new_options);
+        update_option(self::OPTION_NAME, $new_options);
         //delete transient as well
         $this->delete_transient_js();
     }
@@ -544,7 +553,6 @@ class Ank_Simplified_GA_Admin
      * Check if we need to upgrade database options or not
      * @param $db_options
      * @return bool|mixed
-     *
      */
     private function can_proceed_to_upgrade($db_options)
     {
